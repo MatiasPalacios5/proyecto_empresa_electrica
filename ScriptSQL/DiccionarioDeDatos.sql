@@ -1,0 +1,143 @@
+-- create database empresa_electrica;
+-- use empresa_electrica;
+
+create table if not exists usuario (
+    id_usuario int not null auto_increment,
+    direccion varchar(40) not null,
+    telefono varchar(40) not null,
+    constraint pk_usuario primary key (id_usuario)
+);
+
+create table if not exists empresa (
+    id_usuario int not null,
+    cuit varchar(15) not null, 
+    cap_kw decimal(10,2) not null, 
+
+    constraint pk_empresa primary key (id_usuario),  -- contrato pk_empresa clave primaria 
+    constraint fk_empresa_usuario foreign key (id_usuario)
+		references usuario (id_usuario) -- contrato clave foranea fk_empresa_usuario 
+        on delete cascade
+		on update cascade,
+    constraint chk_cap_kw check (cap_kw >= 0 and cap_kw <= 50000), -- cap_kw puede tomar un valor entre ese rango
+    constraint uk_cuit unique (cuit) -- ponemos que el atributo cuit es unico
+);
+
+create table if not exists persona (
+    id_usuario int not null,
+    dni int not null,
+    nombre varchar(40) not null,
+    apellido varchar(40) not null,
+
+    constraint pk_persona primary key (id_usuario), 
+    constraint fk_persona_usuario foreign key (id_usuario)
+		references usuario(id_usuario)
+        on delete cascade
+		on update cascade,
+    constraint dni_persona check (dni > 0 and dni < 1000000000),
+    constraint uk_dni unique (dni)
+);
+
+create table if not exists empleado (
+    id_usuario int not null,
+    sueldo decimal(10,2) not null,
+    constraint pk_empleado primary key (id_usuario),
+    constraint fk_empleado_persona foreign key (id_usuario)
+        references persona(id_usuario)
+        on delete cascade
+        on update cascade,
+	constraint chk_sueldo_positivo check (sueldo > 0)  
+); 
+
+create table if not exists motivo (
+    codigo_mot int not null auto_increment,
+    descripcion_mot varchar(50) not null,
+    constraint pk_codigo_mot primary key(codigo_mot)
+);
+
+
+create table if not exists reclamo (
+    numero_reclamo int not null auto_increment,
+    fecha_resolucion date, 
+    id_usuario int not null, 
+    codigo_mot int not null, 
+    fecha_reclamo date not null,
+    hora_reclamo time not null,
+
+    constraint pk_reclamo primary key (numero_reclamo),
+    constraint fk_reclamo_us foreign key (id_usuario) references usuario(id_usuario) 
+        on delete cascade  -- Cuando se elimina un usuario a la informacion de los reclamos asociados se debe eliminar
+		on update cascade, -- Si cambio un id_usuario, se actualiza 
+    constraint fk_reclamo_cod foreign key(codigo_mot) 
+		references motivo(codigo_mot) 
+        on delete restrict -- Protege de borrar info importante como el motivo
+		on update cascade -- Si cambio un codigo_mot, se actualiza
+);
+
+create table if not exists material (
+    codigo_mat int not null auto_increment,
+    descripcion_mat varchar(50) not null,
+    constraint pk_codigo_mat primary key(codigo_mat)
+);
+
+create table if not exists rellamado (
+    numero_reclamo int not null,
+    numero_llamado int not null,
+    fecha date not null,
+    hora time not null,
+    constraint pk_rellamado primary key (numero_reclamo, numero_llamado),
+    constraint fk_rellamado_reclamo foreign key (numero_reclamo) 
+        references reclamo(numero_reclamo)
+        on delete cascade
+        on update cascade
+);
+
+create table if not exists deriva (
+    numero_reclamo int not null,
+    id_usuario int not null,
+    constraint pk_deriva primary key (numero_reclamo, id_usuario),
+    constraint fk_deriva_reclamo foreign key (numero_reclamo)
+        references reclamo(numero_reclamo)
+        on delete cascade
+        on update cascade,
+    constraint fk_deriva_empleado foreign key (id_usuario) 
+        references empleado(id_usuario)
+        on delete cascade
+        on update cascade
+);
+
+create table if not exists utiliza (
+    numero_reclamo int not null,
+    codigo_mat int not null,
+    cantidad int not null,
+    -- Se usa clave primaria compuesta (numero_reclamo, codigo) 
+    -- para permitir varios materiales por reclamo.
+    constraint pk_utiliza primary key (numero_reclamo, codigo_mat),
+    constraint fk_utiliza_reclamo foreign key (numero_reclamo)
+        references reclamo(numero_reclamo)
+        on delete cascade
+        on update cascade,
+    constraint fk_utiliza_material foreign key (codigo_mat)
+        references material(codigo_mat)
+		on delete restrict
+        on update cascade,
+	constraint chk_cantidad_positiva check (cantidad > 0)
+);
+
+-- TABLA AUDITORIA
+
+create table if not exists auditoria_reclamo (
+    id_auditoria int not null auto_increment, 
+    numero_reclamo int not null,
+    fecha_eliminacion date not null,
+    usuario_bd varchar(40) not null,
+    constraint pk_auditoria_reclamo primary key (id_auditoria)
+);
+
+-- TRIGGER PARA LA ELIMINACION DE RECLAMOS
+create trigger reclamos_eliminado 
+	after delete on reclamo
+	for each row 
+	insert into auditoria_reclamo (numero_reclamo, fecha_eliminacion, usuario_bd)
+	values (old.numero_reclamo, curdate(), user()) 	-- OLD fila recien borrada 
+													-- curdate() devuelve fecha actual
+													-- user() obtiene el usuario de la bdd 
