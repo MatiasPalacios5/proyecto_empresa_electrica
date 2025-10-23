@@ -45,12 +45,12 @@ create table if not exists empleado (
     constraint fk_empleado_persona foreign key (id_usuario) 
         references persona(id_usuario) -- vincula cada empleado con un usuario existente
         on delete cascade -- si se borra un usuario, se borran registros relacionados
-        on update cascade, -- si se cambia el id_usuario en la tabla usuario, el cambio se transmite automaticamente 
+        on update cascade, -- si se cambia el id_usuario en la tabla usuario, el cambio se extiende automaticamente 
 	constraint chk_sueldo_positivo check (sueldo > 0)   -- el sueldo no puede ser negativo ni 0
 ); 
 
 create table if not exists motivo (
-    codigo_mot int not null auto_increment, identificador unico de motivo (clave primaria)
+    codigo_mot int not null auto_increment, -- identificador unico de motivo (clave primaria)
     descripcion_mot varchar(50) not null,
     constraint pk_codigo_mot primary key(codigo_mot) -- contrato pk_codigo_mot clave primaria 
 );
@@ -67,7 +67,7 @@ create table if not exists reclamo (
     constraint pk_reclamo primary key (numero_reclamo), -- identifica de forma unica cada reclamo
     constraint fk_reclamo_us foreign key (id_usuario) 
 	references usuario(id_usuario) -- vincula cada reclamo con el usuario correspondiente
-        on delete cascade  -- Cuando se elimina un usuario a la informacion de los reclamos asociados se debe eliminar
+        on delete cascade  -- Cuando se elimina un usuario a la informacion de los reclamos asociados, se elimina
 		on update cascade, -- Si cambio un id_usuario, se actualiza 
     constraint fk_reclamo_cod foreign key(codigo_mot) 
 		references motivo(codigo_mot) -- clave foranea que vinculq cada reclamo con un motivo
@@ -76,53 +76,55 @@ create table if not exists reclamo (
 );
 
 create table if not exists material (
-    codigo_mat int not null auto_increment,
+    codigo_mat int not null auto_increment, -- clave primaria
     descripcion_mat varchar(50) not null,
-    constraint pk_codigo_mat primary key(codigo_mat)
+    constraint pk_codigo_mat primary key(codigo_mat) -- identifica de forma unica cada material
 );
 
 create table if not exists rellamado (
-    numero_reclamo int not null,
+    numero_reclamo int not null, 
     numero_llamado int not null,
-    fecha date not null,
-    hora time not null,
-    constraint pk_rellamado primary key (numero_reclamo, numero_llamado),
+    fecha date not null, -- fecha del rellamado
+    hora time not null, -- hora del rellamado
+	-- clave primaria compuesta; garantiza que no haya mas de un rellamado con el mismo numero para un mismo reclamo
+    constraint pk_rellamado primary key (numero_reclamo, numero_llamado), 
     constraint fk_rellamado_reclamo foreign key (numero_reclamo) 
-        references reclamo(numero_reclamo)
-        on delete cascade
-        on update cascade
+        references reclamo(numero_reclamo) -- vincula cada rellamado con el reclamo correspondiente 
+        on delete cascade -- si se borra un reclamo se borran registros relacionados
+        on update cascade -- si se cambia un numero_reclamo de la tabla usuario, se actualiza automaticamente aca
 );
 
 create table if not exists deriva (
-    numero_reclamo int not null,
+    numero_reclamo int not null, 
     id_usuario int not null,
-    constraint pk_deriva primary key (numero_reclamo, id_usuario),
-    constraint fk_deriva_reclamo foreign key (numero_reclamo)
-        references reclamo(numero_reclamo)
-        on delete cascade
-        on update cascade,
+	-- clave primaria compuesta que garantiza que no haya mas de un derivacion con el mismo usuario para un mismo reclamo
+    constraint pk_deriva primary key (numero_reclamo, id_usuario),  
+    constraint fk_deriva_reclamo foreign key (numero_reclamo) 
+        references reclamo(numero_reclamo) -- clave foranea que relaciona cada derivacion con su reclamo
+        on delete cascade -- si se elimina un reclamo, se elimina la derivacion asociada
+        on update cascade, -- si se cambia un reclamo, la informacion se transmite automaticamente
     constraint fk_deriva_empleado foreign key (id_usuario) 
-        references empleado(id_usuario)
-        on delete cascade
-        on update cascade
+        references empleado(id_usuario) -- se relaciona cada derivacion a un empleado correspondiete
+        on delete cascade -- si se borra un empleado/usuario, se borran registros relacionados
+        on update cascade -- si se cambia alguno de las anteriores, el cambio se extiende a aca
 );
 
 create table if not exists utiliza (
     numero_reclamo int not null,
     codigo_mat int not null,
-    cantidad int not null,
+    cantidad int not null, -- cantidad de material utilizado (mayor a 0)
     -- Se usa clave primaria compuesta (numero_reclamo, codigo) 
     -- para permitir varios materiales por reclamo.
     constraint pk_utiliza primary key (numero_reclamo, codigo_mat),
     constraint fk_utiliza_reclamo foreign key (numero_reclamo)
-        references reclamo(numero_reclamo)
-        on delete cascade
-        on update cascade,
+        references reclamo(numero_reclamo) 
+        on delete cascade -- si se borra un reclamo, se borran registros relacionados
+        on update cascade, -- se se cambia un numero_reclamo en la tabla reclamo, el cambio se transmite automaticamente
     constraint fk_utiliza_material foreign key (codigo_mat)
-        references material(codigo_mat)
+        references material(codigo_mat) 
 		on delete restrict
         on update cascade,
-	constraint chk_cantidad_positiva check (cantidad > 0)
+	constraint chk_cantidad_positiva check (cantidad > 0) -- la cantidad de material utilizado debe ser mayor 0
 );
 
 -- TABLA AUDITORIA
@@ -132,7 +134,7 @@ create table if not exists auditoria_reclamo (
     numero_reclamo int not null,
     fecha_eliminacion date not null,
     usuario_bd varchar(40) not null,
-    constraint pk_auditoria_reclamo primary key (id_auditoria)
+    constraint pk_auditoria_reclamo primary key (id_auditoria) -- identificador unico para cada registro de auditoria
 );
 
 -- TRIGGER PARA LA ELIMINACION DE RECLAMOS
