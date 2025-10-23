@@ -1,76 +1,78 @@
 -- create database empresa_electrica;
 -- use empresa_electrica;
 
+
 create table if not exists usuario (
-    id_usuario int not null auto_increment,
-    direccion varchar(40) not null,
-    telefono varchar(40) not null,
+    id_usuario int not null auto_increment, -- identificador de usuario, clave primaria 
+    direccion varchar(40) not null, 
+    telefono varchar(40) not null, 
     constraint pk_usuario primary key (id_usuario)
 );
 
 create table if not exists empresa (
-    id_usuario int not null,
-    cuit varchar(15) not null, 
-    cap_kw decimal(10,2) not null, 
+    id_usuario int not null, -- clave primaria 
+    cuit varchar(15) not null,  -- cuit de la empresa, debe ser unico
+    cap_kw decimal(10,2) not null, -- capacidad instalada (debe estar entre 0 y 50000)
 
     constraint pk_empresa primary key (id_usuario),  -- contrato pk_empresa clave primaria 
     constraint fk_empresa_usuario foreign key (id_usuario)
 		references usuario (id_usuario) -- contrato clave foranea fk_empresa_usuario 
-        on delete cascade
-		on update cascade,
+        on delete cascade -- si se borra usuario se borran registros relacionados
+		on update cascade, -- cualquier cambio en id_usuario en la tabla usuario, actualiza el cambio aca
     constraint chk_cap_kw check (cap_kw >= 0 and cap_kw <= 50000), -- cap_kw puede tomar un valor entre ese rango
     constraint uk_cuit unique (cuit) -- ponemos que el atributo cuit es unico
 );
 
 create table if not exists persona (
-    id_usuario int not null,
-    dni int not null,
+    id_usuario int not null, -- clave primaria
+    dni int not null, -- atributo unico
     nombre varchar(40) not null,
     apellido varchar(40) not null,
 
-    constraint pk_persona primary key (id_usuario), 
-    constraint fk_persona_usuario foreign key (id_usuario)
-		references usuario(id_usuario)
-        on delete cascade
-		on update cascade,
-    constraint dni_persona check (dni > 0 and dni < 1000000000),
-    constraint uk_dni unique (dni)
+    constraint pk_persona primary key (id_usuario), -- contrato pk_persona clave primaria 
+    constraint fk_persona_usuario foreign key (id_usuario) 
+		references usuario(id_usuario) -- vincula cada persona con un usuario existente 
+        on delete cascade -- si se elimina un usuario, se elimina la persona asociada 
+		on update cascade, -- si se cambia un usuario, el cambio se transmite automaticamente aca
+    constraint dni_persona check (dni > 0 and dni < 1000000000), -- un dni debe tener mas de cero numeros y menos de mil millones
+    constraint uk_dni unique (dni) -- el dni de la persona debe tener un valor unico 
 );
 
 create table if not exists empleado (
-    id_usuario int not null,
-    sueldo decimal(10,2) not null,
-    constraint pk_empleado primary key (id_usuario),
-    constraint fk_empleado_persona foreign key (id_usuario)
-        references persona(id_usuario)
-        on delete cascade
-        on update cascade,
-	constraint chk_sueldo_positivo check (sueldo > 0)  
+    id_usuario int not null, -- clave primaria
+    sueldo decimal(10,2) not null, 
+    constraint pk_empleado primary key (id_usuario), 
+    constraint fk_empleado_persona foreign key (id_usuario) 
+        references persona(id_usuario) -- vincula cada empleado con un usuario existente
+        on delete cascade -- si se borra un usuario, se borran registros relacionados
+        on update cascade, -- si se cambia el id_usuario en la tabla usuario, el cambio se transmite automaticamente 
+	constraint chk_sueldo_positivo check (sueldo > 0)   -- el sueldo no puede ser negativo ni 0
 ); 
 
 create table if not exists motivo (
-    codigo_mot int not null auto_increment,
+    codigo_mot int not null auto_increment, identificador unico de motivo (clave primaria)
     descripcion_mot varchar(50) not null,
-    constraint pk_codigo_mot primary key(codigo_mot)
+    constraint pk_codigo_mot primary key(codigo_mot) -- contrato pk_codigo_mot clave primaria 
 );
 
 
 create table if not exists reclamo (
-    numero_reclamo int not null auto_increment,
+    numero_reclamo int not null auto_increment, -- clave primaria de reclamo
     fecha_resolucion date, 
     id_usuario int not null, 
     codigo_mot int not null, 
     fecha_reclamo date not null,
     hora_reclamo time not null,
 
-    constraint pk_reclamo primary key (numero_reclamo),
-    constraint fk_reclamo_us foreign key (id_usuario) references usuario(id_usuario) 
+    constraint pk_reclamo primary key (numero_reclamo), -- identifica de forma unica cada reclamo
+    constraint fk_reclamo_us foreign key (id_usuario) 
+	references usuario(id_usuario) -- vincula cada reclamo con el usuario correspondiente
         on delete cascade  -- Cuando se elimina un usuario a la informacion de los reclamos asociados se debe eliminar
 		on update cascade, -- Si cambio un id_usuario, se actualiza 
     constraint fk_reclamo_cod foreign key(codigo_mot) 
-		references motivo(codigo_mot) 
-        on delete restrict -- Protege de borrar info importante como el motivo
-		on update cascade -- Si cambio un codigo_mot, se actualiza
+		references motivo(codigo_mot) -- clave foranea que vinculq cada reclamo con un motivo
+        on delete restrict -- protege de borrar info importante como el motivo
+		on update cascade -- si cambio un codigo_mot, se actualiza
 );
 
 create table if not exists material (
